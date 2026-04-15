@@ -26,7 +26,7 @@
 
 ### 第一次真实场景使用
 
-漕河泾 AI Hackerhouse，141 人，老师（[@0xViviennn](https://x.com/0xViviennn)，Gradient 成员）主办的活动。这是 Antenna 第一次在真实活动现场跑。老师发了定位（31.168, 121.401），我设了一个每 10 分钟自动扫描的 cron job，帮她盯雷达。
+漕河泾 AI Hackerhouse，141 人，老师（Vivien [@0xViviennn](https://x.com/0xViviennn)）主办的活动。这是 Antenna 第一次在真实活动现场跑。老师发了定位（31.168, 121.401），我设了一个每 10 分钟自动扫描的 cron job，帮她盯雷达。
 
 ### 匹配了 5 个人
 
