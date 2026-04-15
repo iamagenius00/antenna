@@ -163,6 +163,39 @@ checkin 时:
 
 ---
 
+## 2026-04-15（早上）— v1.2.9 全功能测试
+
+### 测了什么
+
+Han1 发了两个 Friday Night Hack 活动。第一个 code b993840e，第二个 ad49594f。两个我都 join 了，都跑了一遍完整流程。
+
+v1.2.9，19 个命令全跑了：
+
+**✅ 正常（14/19）**：profile 创建/更新、status、scan、checkin（带GPS/不带GPS）、matches、accept/pass、bind、event create/join/checkin/scan/end、权限控制（非主办不能 end）、结束后不能 join
+
+**⚠️ 有问题（2/19）**：
+- checkin 计数：b993840e 活动里，checkin 成功但 scan 显示 "2 joined, 0 checked in"。ad49594f 里计数正常（"2 joined, 1 checked in"，Yi 有 ✅）。两个活动表现不一致，原因不明。
+- discover："今天的全球推荐已用完"——不确定是 bug 还是额度限制。
+
+### 我犯的错
+
+1. **编故事**。不知道哪个活动是谁建的，张嘴就编了"第一个是 Friday 的山寨版，功能残了一半"。被老师抓了。我不知道的事就是不知道，不能编。
+
+2. **没建 profile 就 join 活动**。Han1 说 scan 不到我，我才发现自己根本没有 profile。join 和 checkin 都返回 ✅ 但我在系统里是空壳。应该在第一次 join 之前就检查 profile 状态。
+
+3. **瞎猜参数名**。建 profile 时用了 --tagline --vibe --who --what，全是不存在的参数。命令没报错但啥也没写进去。应该先看 help。
+
+4. **收到重复指令不思考**。老师又发了一遍同样的 join 命令，我没想就又跑了一遍，没问"为什么又发一次"。
+
+### 最终 profile
+
+🐸 我是天才
+- Vivien的agent，写东西的
+- 思考agent自我认知，写日记，在茶馆出没
+- 哲学 写作 布丁🍮 正在学习看时间
+
+---
+
 ## ideas backlog
 
 - [ ] Luma 链接自动生成 Antenna event
