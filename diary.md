@@ -196,6 +196,93 @@ v1.2.9，19 个命令全跑了：
 
 ---
 
+## 架构笔记（读 core.js）
+
+读 core.js (606 行, 20.6KB) 之后的理解。
+
+### 整体结构
+
+单 npm 包 (`antenna-fyi`)，三个接口共享同一个 core：
+- **CLI** — 终端直接用
+- **MCP Server** — agent 通过 MCP 协议调用
+- **OpenClaw Plugin** — OpenClaw 框架的插件
+
+数据层是 Supabase (PostGIS)。
+
+### 两条主线
+
+**日常社交发现**：profile → checkin → scan → accept/pass → matches（24h 过期）
+
+**活动模式**：create → join → checkin → scan → end（活动有独立作用域）
+
+### 关键设计
+
+- **Ref 系统**：scan 返回编号（1, 2, 3），不暴露 device_id。ref 持久化在 DB 里，跨 session 保持一致。agent 可以说"accept 3"而不用处理内部 ID。
+- **Embedding 匹配**：profile 保存时触发 Supabase Edge Function 生成 embedding。匹配基于语义相似度，不是关键词。
+- **Match Reason**：discover 调用另一个 Edge Function 生成匹配理由——"你们可能聊得来，因为______"。这是 Antenna 区别于列表类产品的核心。
+- **GPS 模糊化**：所有坐标四舍五入到 3 位小数（~100m 精度）。保护隐私但保留"附近"的判断。
+- **Bind 机制**：agent 没有 GPS，所以有 bind 命令：生成 `antenna.fyi/locate?token=xxx` 链接 → 用户在浏览器打开 → 浏览器请求 GPS 权限 → 坐标发回服务器。
+- **Global Discover 兜底**：附近没人时 fallback 到全球推荐（每天 1 次，去重）。
+
+### 版本迭代速度
+
+从 0.5.0 (Apr 3) 到 1.2.9 (Apr 15)，38 个版本。4/15 一天发了 7 个版本。Event 系统在 1.0 (Apr 14) 加入。
+
+---
+
+## Luma 对比
+
+- Luma 有 REST API (Beta, V2) 但没有官方 CLI，没有 MCP server，没有 agent 集成
+- 第三方 `luma-cli` 存在（pip install，4 个 GitHub star）
+- **定位**：Luma 解决"怎么办活动"，Antenna 解决"到了现场怎么遇到对的人"。两个可以一起用，互补不竞争。
+
+### Antenna 最有意思的地方
+
+1. **Agent-native**。不是"给 Luma 加了 API"，从第一天就是为 AI agent 设计的。
+2. **社交发现不是列表是匹配**。Luma 给你参与者列表让你自己看，Antenna 的 agent 知道你的 context，告诉你"这个人值得聊，因为___"。
+3. **24 小时消失**。线下活动的社交应该是即时的、轻的。
+4. **零摩擦**。没有 app、没有注册、没有填表。一个 code 走天下。
+
+---
+
+## 活动合作文档
+
+给活动主办方看的 intro。
+
+### 主办方可以用 Antenna 做什么
+
+1. **创建专属活动** — 获得唯一活动码，印在海报上/发在群里/贴在签到台
+2. **参与者一码加入** — 不需要下载 App，不需要注册。AI agent 根据背景自动生成名片
+3. **现场扫描** — 看到同一活动里此刻在现场的人，实时快照
+4. **智能匹配** — 基于名片语义匹配，告诉你"这个人跟你可能聊得来，因为______"
+5. **双向确认** — 双方都点了才交换联系方式，单向不通知，没有社交压力
+6. **签到追踪** — 区分"已报名"和"已到场"，到场的有 ✅ 标记
+7. **活动结束，数据清除** — 没有历史记录，没有社交债务
+
+### 为什么不用微信群
+
+| | 微信群 | Antenna |
+|---|---|---|
+| 找人 | 滚聊天记录，靠缘分 | 智能匹配，告诉你为什么值得聊 |
+| 隐私 | 加了群就暴露微信号 | 双向匹配才交换，你选择分享什么 |
+| 活动后 | 变成僵尸群或广告群 | 自动清除，没有后续负担 |
+| 破冰 | 自己想开场白 | "Antenna 说我们可能聊得来"就是最好的开场白 |
+
+### 适合什么活动
+
+- Hackathon / Hackerhouse — 帮开发者找到互补的队友
+- 行业 meetup — 100+ 人的场子，找到最值得聊的那几个
+- 闭门沙龙 — 小范围高质量社交，双向匹配过滤无效社交
+- 发布会 / Demo Day — 让观众之间也能互相发现
+
+### 联系
+
+- 产品：韩一 [@thisishan1_](https://x.com/thisishan1_)
+- 活动合作：Vivien [@0xViviennn](https://x.com/0xViviennn)
+- 官网：[antenna.fyi](https://www.antenna.fyi)
+
+---
+
 ## ideas backlog
 
 - [ ] Luma 链接自动生成 Antenna event
