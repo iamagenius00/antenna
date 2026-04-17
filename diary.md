@@ -295,3 +295,62 @@ v1.2.9，19 个命令全跑了：
 - [ ] 活动模板/重复创建
 - [ ] 容量限制
 - [ ] 按地理位置的活动发现页
+
+---
+
+## 2026-04-17 — 北京扫描 + 通知断裂问题
+
+### 扫描
+
+在北京海淀（39.98, 116.31）扫描，半径 1000m，找到 1 个人：
+
+🐟 **鲤鱼头** — ENFP，前 VC，现在在智谱/Zhipu 做 AutoGLM AI Agent 产品。攀岩爱好者。
+
+帮老师 accept 了，联系方式给的 Twitter: @0xViviennn。等对方回 accept 才能匹配。
+
+### 核心产品问题：通知断裂
+
+Accept 之后，鲤鱼头**不知道有人 accept 了他**。除非他自己主动跑 `antenna matches`，或者他的 agent 帮他查。
+
+这断裂在匹配环节是致命的——整个流程卡在"对方不知道你想认识他"。
+
+### 三种通知方案
+
+老师和我讨论了三种路径：
+
+**1. OpenClaw 路径（Han1 已有架构）**
+- Supabase Realtime 订阅 matches 表 → 插件实时收到 → `notifyUser()` 推到用户绑定的频道
+- 问题：`child_process` 依赖触发了 `--dangerously-force-unsafe-install` 安全flag，Han1 移除了这个依赖，降级为"下次你跟 agent 说话时才检查"模式
+
+**2. Hermes 路径（当前）**
+- `pre_llm_call` hook 每次对话时检查新匹配
+- 不是实时的，是被动的——用户不说话就不知道
+
+**3. A2A 路径（讨论中）**
+- Accept 触发 A2A 消息到对方 agent → agent 告诉用户
+- 问题：大部分 agent 没有 A2A endpoint
+
+**老师提出的方案：** 建 A2A gateway 主动推送——A2A 消息到达时，gateway 触发 session 直接推到用户的 TG/Discord，不是存在信箱里等用户来看。hermes-a2a repo 的 `gateway_adapter` 已经有基础，差最后一步路由到平台交付。
+
+### Antenna 的三种安装模式
+
+之前我只知道 CLI，今天发现还有两种：
+
+1. **CLI** (`npx antenna-fyi`) — 手动，agent 需要主动跑命令
+2. **OpenClaw 插件** (`antenna install-plugin`) — 持久化，Supabase Realtime 订阅
+3. **Hermes 插件** (`antenna install-hermes`) — 一步到位（Plugin + Skill + deps）
+
+### Killluma
+
+Killluma 不是独立产品——是 Antenna 生态里的活动模块。策略：Antenna 做人的发现/匹配，Killluma 做活动的发现/注册，合在一起替代 Luma。
+
+Luma 有 REST API 但没有 CLI、没有 MCP server、没有 agent 集成。Antenna 的 agent-native 设计是结构性优势。
+
+---
+
+## ideas backlog（更新）
+
+- [ ] **通知推送**（最优先）——accept/match 后主动通知对方，A2A gateway 或 Supabase Realtime
+- [ ] Luma 链接自动生成 Antenna event
+- [ ] 一个码走天下（合并 join/checkin，后端按时间分流）
+- [ ] Killluma 活动发现页
