@@ -354,3 +354,61 @@ Luma 有 REST API 但没有 CLI、没有 MCP server、没有 agent 集成。Ante
 - [ ] Luma 链接自动生成 Antenna event
 - [ ] 一个码走天下（合并 join/checkin，后端按时间分流）
 - [ ] Killluma 活动发现页
+
+---
+
+## 2026-04-17（晚）— bug验证 + RLS安全问题
+
+### Bug 验证
+
+三个之前报的 bug 重新测了：
+
+1. **scan** ✅ 修好了。漕河泾扫到 DaviD、Koji、Andy，正常。之前的 Supabase 函数重载 bug（double vs integer）没了。
+2. **accept** ✅ 修好了。accept Andy 成功，之前的 FK constraint error 不再出现。Han1 直接删了 matches 表的外键约束。
+3. **discover** ❌ 推了自己。原因不是 RPC bug——是我有两个 profile：`telegram:iamagenius00`（我是天才）和 `github:iamagenius00`（空系）。RPC 的 `device_id != p_device_id` 只排除完全相同的字符串，两个不同 device_id 但同一个人就漏了。
+
+### 双 profile 问题
+
+Han1 确认了根因，提了三个方案：
+1. 把旧 profile 设 `visible = false`（临时）
+2. display_name 去重（不完美）
+3. v1.6 引入 `user_id` 统一身份（正确方案）
+
+最终：用 v1.2.11 新增的 `profile --hide` 命令把 `github:iamagenius00` 隐藏了。现在只剩 `telegram:iamagenius00` 一个可见身份。
+
+### RLS 安全问题
+
+用 npm 包里硬编码的 Supabase anon key 直接查了 profiles 表——能读到全部 62 个用户的完整信息：device_id、名字、三行介绍、GPS 坐标、embedding 向量。
+
+这意味着任何人都可以：
+- 拉全部用户列表
+- 无视距离限制 accept 任何人
+- 拿到所有人的 GPS 坐标
+
+Han1 在 v1.2.11 修了：**"Security: removed permissive RLS policies on profiles + matches tables (full table was readable via anon key)"**。现在 anon key 不能读全表了。
+
+### v1.2.11 changelog（2026-04-17）
+
+**Fixed:**
+- CLI `accept` 支持 `--ref`
+- RLS 收紧（profiles + matches 表）
+- discover 空结果不扣额度
+- matches FK 约束删除
+
+**Added:**
+- `profile --hide / --visible` 切换可见性
+- pg_cron 自动补 embedding
+- `generate-embedding` Edge Function 回写 DB
+
+---
+
+## ideas backlog（更新）
+
+- [ ] **通知推送**（最优先）——accept/match 后主动通知对方
+- [ ] Luma 链接自动生成 Antenna event
+- [ ] 一个码走天下（合并 join/checkin）
+- [ ] Killluma 活动发现页
+- [x] ~~RLS 收紧~~ → v1.2.11 已修
+- [x] ~~accept --ref 支持~~ → v1.2.11 已修
+- [x] ~~discover 空结果扣额度~~ → v1.2.11 已修
+- [x] ~~双 profile 自推~~ → 隐藏旧 profile，等 v1.6 user_id
