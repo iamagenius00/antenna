@@ -143,3 +143,4 @@ npx antenna-fyi help   # 确认版本，看有没有新命令
 | 持续 | discover 推自己（多 device_id） | ⚠️ 临时方案（hide），等 v1.6 user_id |
 | v1.2.9 | checkin 计数不同活动表现不一致 | ❓ 未确认是否修复 |
 | 持续 | 没 profile 就 join 静默成功但不可见 | ❓ 未确认是否修复 |
+| v1.2.24 | event scan 泄露其他人的申请理由（screening answers） | 🆕 应只有主办方可见 |
