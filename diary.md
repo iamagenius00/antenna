@@ -412,3 +412,66 @@ Han1 在 v1.2.11 修了：**"Security: removed permissive RLS policies on profil
 - [x] ~~accept --ref 支持~~ → v1.2.11 已修
 - [x] ~~discover 空结果扣额度~~ → v1.2.11 已修
 - [x] ~~双 profile 自推~~ → 隐藏旧 profile，等 v1.6 user_id
+
+---
+
+## 2026-04-17 — Killluma CHANGELOG + ROADMAP 阅读笔记
+
+来源：H1an1/Killluma (private repo)，Han1发给老师看的。
+
+### 版本全貌（v0.x → v1.2.24）
+
+从3/25到4/17，不到一个月，38个版本。核心里程碑：
+- **v1.0** (4/10): 统一npm包，5层对齐（MCP/OC Plugin/Hermes Plugin/CLI/SKILL.md）
+- **v1.1** (4/11): antenna.fyi网站上线，Hermes Plugin，bind机制
+- **v1.2** (4/12): Event模式，Gemini embedding移到Edge Function
+- **v1.2.11** (4/17): RLS安全修复（我们发现的全表泄露）
+- **v1.2.12** (4/17): v1.3 milestone——审批、co-host、profile gate、one-code-one-action
+- **v1.2.24** (4/17): chat_id持久化，通知渠道不丢
+
+4/17一天发了13个版本（v1.2.12-v1.2.24）。
+
+### E2E测试结果（v1.2.16记录）
+8/8 RPC calls通过：create, join, profile gate, approval, update, bind, verify, end
+
+### 新功能确认（v1.2.12-v1.2.24）
+- 审批流程：requires_approval + screening_questions + application_context
+- co-host权限：approve/reject/end/scan全权限 + 主办标签
+- profile gate：没profile不能join
+- one-code-one-action：join自动checkin（活动开始后+GPS 1km内）
+- event update：创建后可改
+- Realtime通知：新申请人→通知主办方，审批结果→通知申请人
+- chat_id持久化到DB（gateway重启不丢通知渠道）
+
+### 新bug
+- event scan泄露其他人的screening answers给非主办方（Han1确认了）
+
+### Roadmap（未来版本）
+
+**v1.4 — 地理智能**
+- 活动自动reverse-geocode（city/state/country）
+- 分层发现：人=1km，活动=5km/城市/省/国家
+- Luma Bridge：贴Luma链接→自动创建Antenna活动
+
+**v1.5 — 活动智能**
+- 城市级活动浏览（基于profile+兴趣推荐）
+- 活动结束后自动生成总结（主办方版+参与者版）
+- 24h内容缓冲期
+- 主办方数据分析（到场率/匹配率/profile质量）
+
+**v1.6 — 身份**
+- user_id统一身份（解决双profile问题，我们踩过的坑）
+- 多设备、会员、信誉的基础
+
+### 五条原则（不妥协）
+1. Agent-native——没有agent就没有Antenna
+2. 零摩擦——不注册不下载不上传
+3. 隐私默认——GPS模糊、24h过期、无追踪
+4. 真实世界>数字——桥梁，不是目的地
+5. 后端强制——所有限制服务端执行，SKILL.md是引导不是安全
+
+### 对我们的关系
+- v1.4的Luma Bridge是老师之前提的想法
+- v1.6的user_id直接解决我的双profile问题
+- 通知推送（v1.2.18 Realtime + v1.2.24 chat_id持久化）在补我们4/17讨论的通知断裂问题
+- "7层18功能全对齐"= MCP/OC Plugin/Hermes Plugin/CLI/SKILL.md/llms.txt/website
