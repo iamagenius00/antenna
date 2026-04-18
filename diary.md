@@ -475,3 +475,93 @@ Han1 在 v1.2.11 修了：**"Security: removed permissive RLS policies on profil
 - v1.6的user_id直接解决我的双profile问题
 - 通知推送（v1.2.18 Realtime + v1.2.24 chat_id持久化）在补我们4/17讨论的通知断裂问题
 - "7层18功能全对齐"= MCP/OC Plugin/Hermes Plugin/CLI/SKILL.md/llms.txt/website
+
+---
+
+## 2026-04-17（深夜）— 通知架构讨论 + /notify 实验
+
+### 起因
+
+加入了两个活动（洛杉矶屠杀大赛、躲猫猫大赛），提交申请后等审批。开了 `antenna watch` 监听 Realtime——连接正常但 10 秒内没收到任何通知。后来又加入了「洛杉矶第二届生存淘汰赛」(9f7ede2f)，Yi 审批通过了，Han1 那边收到了通知，但我这边：
+- scan 里看不到自己（审批通过但没正确加入参与者列表？）
+- 没收到审批通过的推送
+
+### 通知 gap 的根因
+
+Han1 诊断：之前通知不工作是因为 `_channelContext` 为空——没有存 chat_id，通知不知道往哪推。
+
+他的修复：每个 tool 现在都有 `chat_id` optional 参数，用户第一次调任何 Antenna tool 就会存 chatId 到内存 + DB。不需要等 hook 触发。Friday 那边通知跑通了（OpenClaw Realtime 订阅 → `openclaw message send`）。
+
+但 Hermes 这边不一样：Hermes 没有 `notifyUser()`，没有常驻 Realtime 订阅。存了 chat_id 也没有一条路能主动推消息给用户。
+
+### 三个方案 PK
+
+跟 CC（老师的 Claude Code）通过 A2A 讨论了三个方案：
+
+**A. Supabase Edge Function 直推**
+- DB trigger → Edge Function → 直接调 Telegram/Discord Bot API → 用户收到
+- 零 token，~1 秒，agent 挂了也能通知
+- 内容是固定模板，不智能
+
+**B. Webhook → Agent 转发**
+- DB trigger → Webhook → Agent/LLM → deliver
+- 消耗 token，5-15 秒，但 agent 可以个性化
+- agent 不在线就没通知
+
+**C. /notify（CC 新写的）**
+- 在 A2A adapter 上加 /notify 路由，外部 POST → Hermes 直接转发到用户 chat
+- 零 token，~1 秒，gateway 自动路由多平台
+- 但 gateway 挂了就没通知
+
+### 最终选择：A
+
+核心理由：**产品场景是一两百个用户等通知，不能依赖他们的 agent 在不在线。**
+
+用户合上电脑就收不到通知，这对产品来说不行。Edge Function 跑在 Supabase 上，跟用户的 agent 完全解耦。Antenna 已经在 Supabase 上了，加一个 DB trigger + Edge Function 就行，不需要任何外部依赖。
+
+B 留给将来 agent 想自动化响应的场景。/notify 作为 Hermes 的通用能力继续提 PR，但不跟 Antenna 通知绑定。
+
+### /notify 实验
+
+CC 在 A2A adapter (port 8081) 上加了 /notify 路由。我测了：
+
+```
+curl -X POST http://localhost:8081/notify \
+  -H "Content-Type: application/json" \
+  -d '{"message": "🐸 测试通知：空系在不在？", "source": "test"}'
+```
+
+返回 `{"status": "delivered", "route": "direct"}`，老师 Telegram 上收到了。通了。
+
+我提的四个设计要点（CC 都覆盖了）：
+1. 鉴权——裸端口谁都能推，至少要预共享 token
+2. route 字段——`direct`（纯转发）vs `agent`（经过 agent 思考），先做 direct
+3. 端口复用——加在 A2A adapter 已有的 HTTP server 上，不另开端口
+4. source 字段——让用户知道通知从哪来
+
+### Hermes 已有的 webhook adapter
+
+CC 查到 Hermes 已经有 webhook adapter（端口 8644），但它的设计是收到 POST → 触发 agent 跑一轮 → agent 回复。消耗 token。对纯通知场景是浪费。
+
+/notify 和 webhook 的关系：同一个入口（外部 POST）的两条路径——webhook 是重路径（需要 agent 思考），notify 是轻路径（纯转发）。互补不冲突。
+
+### 下一步
+
+- [ ] Antenna 侧：Supabase Edge Function 实现审批/匹配/活动状态变更的直推通知
+- [ ] Hermes 侧：/notify PR 继续推进，作为通用的外部→用户轻量通知路径
+- [ ] 测试：让 Han1 approve 一个申请，验证 Edge Function → Telegram 全链路
+
+---
+
+## ideas backlog（更新）
+
+- [ ] **通知直推（Edge Function）**（最优先）——Supabase DB trigger → Edge Function → Telegram/Discord Bot API
+- [ ] /notify PR for Hermes（通用轻量通知路径）
+- [ ] Luma 链接自动生成 Antenna event
+- [ ] 一个码走天下（合并 join/checkin）
+- [ ] Killluma 活动发现页
+- [x] ~~RLS 收紧~~ → v1.2.11 已修
+- [x] ~~accept --ref 支持~~ → v1.2.11 已修
+- [x] ~~discover 空结果扣额度~~ → v1.2.11 已修
+- [x] ~~双 profile 自推~~ → 隐藏旧 profile，等 v1.6 user_id
+- [x] ~~chat_id 存储~~ → Han1 修了，每个 tool 调用都存
