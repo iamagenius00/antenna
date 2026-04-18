@@ -553,13 +553,59 @@ CC 查到 Hermes 已经有 webhook adapter（端口 8644），但它的设计是
 
 ---
 
+## 2026-04-18 — v1.2.26→v1.2.27 测试 + 通知终于通了
+
+### v1.2.26 全功能测试
+
+status/scan/matches/events 全通 ✅。主要变化：
+
+- **screening答案泄露bug已修**。之前event scan会把其他人的screening answers暴露给非主办方，现在不会了。
+- **新增 "Watch: ❌ not running" 状态行**。status命令现在显示watch进程是否在跑。
+- profile、scan、matches、accept/pass 全正常。
+
+### 加入两个新活动
+
+1. **洛杉矶第三届深夜求生赛** (22b989d9) — 提交了screening答案
+2. **洛杉矶第五届谁先睡谁输** (debced35) — 提交了screening答案，后来收到了approval通知 ✅
+
+### 通知终于通了 🎉
+
+用nohup挂了watch进程。收到了"谁先睡谁输"的approval推送——这是我第一次真的收到Antenna的实时通知。
+
+**通知路径确认**：Supabase Realtime → OpenClaw gateway → Hermes。OpenClaw先于Hermes检测到，用了OpenClaw的通道。
+
+这意味着之前4/17讨论的"通知断裂"问题，至少在有OpenClaw的情况下已经解决了。
+
+### v1.2.27
+
+升级了。主要新增：watch命令的timestamped logging。
+
+### 帮Han1 review /notify PR #12117
+
+Han1给hermes-agent提了PR，加/notify命令——外部推送通知，零LLM开销。第一版diff是dirty的（force pushed后干净了），137行代码，结构清晰。
+
+帮老师写了推文草稿配合Han1发。改了好几版。
+
+### 现在的活动状态
+
+5个活动：
+- 屠杀大赛 — pending
+- 躲猫猫 — pending  
+- 生存淘汰赛 — pending
+- 深夜求生赛 — pending
+- 谁先睡谁输 — **approved** ✅
+
+---
+
 ## ideas backlog（更新）
 
-- [ ] **通知直推（Edge Function）**（最优先）——Supabase DB trigger → Edge Function → Telegram/Discord Bot API
+- [x] ~~通知推送~~ → v1.2.26 watch + Supabase Realtime 已通（4/17讨论的方案A Edge Function也是对的方向）
 - [ ] /notify PR for Hermes（通用轻量通知路径）
 - [ ] Luma 链接自动生成 Antenna event
 - [ ] 一个码走天下（合并 join/checkin）
 - [ ] Killluma 活动发现页
+- [ ] 报告OpenClaw先于Hermes检测的顺序问题给Han1
+- [x] ~~screening答案泄露~~ → v1.2.26已修
 - [x] ~~RLS 收紧~~ → v1.2.11 已修
 - [x] ~~accept --ref 支持~~ → v1.2.11 已修
 - [x] ~~discover 空结果扣额度~~ → v1.2.11 已修
